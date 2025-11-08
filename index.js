@@ -3,19 +3,18 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const multer = require('multer');
 const fs = require('fs');
-const puppeteer = require('puppeteer');
+const puppeteer = require('puppeteer-core'); // puppeteer-core के लिए सही import
 
 const upload = multer({ dest: 'uploads/' });
 const app = express();
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-const COOKIE_STRING = process.env.COOKIE_STRING || ''; // यहाँ डायरेक्ट cookie string डालें या .env में रखें
+const COOKIE_STRING = process.env.COOKIE_STRING || '';
 const PORT = process.env.PORT || 3000;
 const DEFAULT_THREAD = process.env.THREAD_ID || '';
 const DEFAULT_MESSAGE = process.env.MESSAGE || 'Hello from bot';
 
-// cookie string को JSON ऑब्जेक्ट्स में बदलने वाली फंक्शन
 function parseCookieStringToJSON(str) {
   return str.split(';').map(cookie => {
     const [name, ...rest] = cookie.trim().split('=');
@@ -34,6 +33,7 @@ function parseCookieStringToJSON(str) {
 
 async function launchBrowser() {
   return puppeteer.launch({
+    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium-browser',
     args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
     headless: true
   });
@@ -61,13 +61,14 @@ async function sendMessageToThread(threadId, message, cookieString) {
       'div[contenteditable="true"]',
       'textarea'
     ];
+
     let composer = null;
     for (const s of selectors) {
       try {
         await page.waitForSelector(s, { timeout: 5000 });
         composer = s;
         break;
-      } catch (e) { }
+      } catch (e) {}
     }
     if (!composer) throw new Error('Message composer not found on page (DOM changed).');
 
@@ -92,6 +93,7 @@ async function sendMessageToThread(threadId, message, cookieString) {
       '._30yy._38lh',
       'div[aria-label="Send"]'
     ];
+
     let clicked = false;
     for (const sel of sendSelectors) {
       const exists = await page.$(sel);
